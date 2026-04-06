@@ -5,6 +5,11 @@
       <span>{{ time }}</span>
     </div>
 
+    <!-- RAM Monitor Widget -->
+    <div class="absolute left-1/2 -translate-x-1/2 -ml-7 flex items-center bg-white/10 rounded-full px-2.5 py-0.5 text-[9px] tracking-wider border border-white/20 font-mono shadow-sm">
+      RAM: {{ (kernel.dynamicUsedRAM / 1024).toFixed(1) }} GB / {{ (kernel.totalRAM / 1024).toFixed(1) }} GB
+    </div>
+
     <!-- Battery & Signal -->
     <div class="flex items-center gap-2">
       <!-- Signal -->
@@ -30,7 +35,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useKernelStore } from '../store/kernel'
 
+const kernel = useKernelStore()
 const time = ref('')
 let timer
 
