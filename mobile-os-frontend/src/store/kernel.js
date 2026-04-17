@@ -12,6 +12,29 @@ export const useKernelStore = defineStore('kernel', () => {
   // App actual en primer plano (null = escritorio)
   const foregroundAppId = ref(null)
 
+  // --- HARDWARE (Batería) ---
+  const batteryLevel = ref(100) // 100% por defecto
+  const isCharging = ref(false)
+
+  // Inicializar Battery API si el navegador la soporta
+  if ('getBattery' in navigator) {
+    navigator.getBattery().then(battery => {
+      // Estado inicial
+      batteryLevel.value = Math.floor(battery.level * 100)
+      isCharging.value = battery.charging
+
+      // Listeners para cambios
+      battery.addEventListener('levelchange', () => {
+        batteryLevel.value = Math.floor(battery.level * 100)
+      })
+      battery.addEventListener('chargingchange', () => {
+        isCharging.value = battery.charging
+      })
+    })
+  } else {
+    console.warn('[Kernel] Battery Status API no soportada en este navegador.')
+  }
+
   // --- RAM DINÁMICA VIRTUAL ---
   const dynamicUsedRAM = ref(usedRAM.value)
   const currentVolatility = ref(1)
@@ -98,6 +121,8 @@ export const useKernelStore = defineStore('kernel', () => {
     activeProcesses,
     foregroundAppId,
     availableRAM,
+    batteryLevel,
+    isCharging,
     openApp,
     closeApp,
     minimizeApp

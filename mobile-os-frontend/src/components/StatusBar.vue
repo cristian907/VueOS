@@ -23,11 +23,26 @@
       </svg>
 
       <!-- Battery -->
-      <div class="flex items-center gap-0.5">
-        <span>100%</span>
-        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-          <path d="M17 4h-3V2h-4v2H7v18h10V4z" />
-        </svg>
+      <div class="flex items-center gap-1.5">
+        <span>{{ kernel.batteryLevel }}%</span>
+        
+        <!-- Battery Icon container -->
+        <div class="relative w-[22px] h-[11px] border border-white/60 rounded-[3px] p-[1px] flex items-center">
+          <!-- Relleno interno (calculado por porcentaje exacto del contenedor) -->
+          <div 
+            class="h-full rounded-[1px] transition-all duration-500"
+            :class="kernel.batteryLevel <= 20 ? 'bg-red-500' : 'bg-white'"
+            :style="{ width: `${kernel.batteryLevel}%` }"
+          ></div>
+          
+          <!-- Terminal (Punta de la batería) -->
+          <div class="absolute -right-[3px] top-1/2 -translate-y-1/2 w-[2px] h-[4px] bg-white/60 rounded-r-[1px]"></div>
+          
+          <!-- Rayo de carga -->
+          <svg v-if="kernel.isCharging" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 drop-shadow-md z-10" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+          </svg>
+        </div>
       </div>
     </div>
   </div>
