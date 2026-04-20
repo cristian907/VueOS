@@ -79,10 +79,33 @@ export const useNetworkStore = defineStore('network', () => {
           settingsStore.setPhoneNumber('')
         }
         else if (msg.type === 'chat') {
+          let text = msg.payload
+          let imageBase64 = null
+          if (typeof msg.payload === 'object' && msg.payload !== null) {
+             text = msg.payload.text || ''
+             imageBase64 = msg.payload.image || null
+          }
+          
+          let blob = null
+          if (imageBase64) {
+             try {
+               const res = await fetch(imageBase64)
+               blob = await res.blob()
+               // Guardar en Galería
+               await db.photos.add({
+                 date: msg.timestamp || new Date().toISOString(),
+                 blob: blob
+               })
+             } catch (err) {
+               console.error('[Network] Error parseando imagen recibida:', err)
+             }
+          }
+
           await db.messages.add({
             chatWith: msg.senderNumber,
             sender: msg.senderNumber,
-            text: msg.payload,
+            text: text,
+            blob: blob,
             date: msg.timestamp || new Date().toISOString()
           })
         }
@@ -126,7 +149,7 @@ export const useNetworkStore = defineStore('network', () => {
     }
   }
 
-  const sendMessage = async (targetNumber, text) => {
+  const sendMessage = async (targetNumber, text, imageBase64 = null) => {
     if (!socket || socket.readyState !== WebSocket.OPEN || !isRegistered.value) {
       throw new Error('No hay conexión a la red P2P.')
     }
@@ -135,16 +158,31 @@ export const useNetworkStore = defineStore('network', () => {
       type: 'chat',
       senderNumber: settingsStore.phoneNumber,
       targetNumber: targetNumber,
-      payload: text,
+      payload: { text, image: imageBase64 },
       timestamp: new Date().toISOString()
     }
 
     socket.send(JSON.stringify(msgData))
 
+    let blob = null
+    if (imageBase64) {
+      try {
+        const res = await fetch(imageBase64)
+        blob = await res.blob()
+        await db.photos.add({
+          date: msgData.timestamp,
+          blob: blob
+        })
+      } catch (err) {
+        console.error('[Network] Error parseando imagen enviada:', err)
+      }
+    }
+
     await db.messages.add({
       chatWith: targetNumber,
       sender: settingsStore.phoneNumber,
       text: text,
+      blob: blob,
       date: msgData.timestamp
     })
   }
@@ -172,9 +210,11 @@ export const useNetworkStore = defineStore('network', () => {
       } else if (newNumber !== oldNumber) {
         // Cambio de número: liberar el anterior y pedir el nuevo en el mismo socket
         if (oldNumber) deregister()
+        isRegistered.value = false
         register(newNumber)
       } else {
         // Mismo número, posiblemente perdimos sesión: re-registrar
+        isRegistered.value = false
         register(newNumber)
       }
     } else {

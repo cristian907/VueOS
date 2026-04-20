@@ -1,8 +1,25 @@
 <template>
   <div class="w-full h-full bg-neutral-100 dark:bg-slate-900 flex flex-col overflow-hidden transition-colors relative">
     
-    <!-- Tab: Keypad -->
-    <div v-show="activeTab === 'keypad'" class="flex-1 flex flex-col overflow-hidden">
+    <!-- PANTALLA DE CONFIGURACIÓN -->
+    <div v-if="!hasNumber" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+      <div class="w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mb-6">
+        <svg class="w-10 h-10 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+      </div>
+      <h2 class="text-2xl font-bold text-black dark:text-white mb-3">Bienvenido a VueCall</h2>
+      <p class="text-neutral-500 dark:text-slate-400 mb-8">Para realizar llamadas en la red P2P, debes configurar tu Número Virtual.</p>
+      
+      <button 
+        @click="goToSettings"
+        class="bg-green-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-green-500/30 active:scale-95 transition-transform"
+      >
+        Ir a Ajustes
+      </button>
+    </div>
+
+    <template v-else>
+      <!-- Tab: Keypad -->
+      <div v-show="activeTab === 'keypad'" class="flex-1 flex flex-col overflow-hidden">
       <div class="pt-5 px-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
         <h1 class="text-3xl font-bold text-black dark:text-white">VueCall</h1>
       </div>
@@ -25,12 +42,17 @@
           <div 
             v-for="(hist, idx) in callStore.callHistory" 
             :key="idx"
-            @click="startCall(hist.number)"
+            @click="startCall(hist.number, !!hist.isVideo)"
             class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 cursor-pointer active:bg-gray-200 dark:active:bg-slate-800 rounded-xl px-2 transition-colors"
           >
              <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" :class="hist.type === 'outgoing' ? 'bg-blue-100 text-blue-500 dark:bg-blue-900/30' : 'bg-green-100 text-green-500 dark:bg-green-900/30'">
-                <svg v-if="hist.type==='outgoing'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5h6m0 0v6m0-6L15 11"></path></svg>
-                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v6h6m-6 0l6-6"></path></svg>
+                <template v-if="hist.isVideo">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </template>
+                <template v-else>
+                  <svg v-if="hist.type==='outgoing'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5h6m0 0v6m0-6L15 11"></path></svg>
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v6h6m-6 0l6-6"></path></svg>
+                </template>
              </div>
              <div class="flex-1 overflow-hidden">
                <h3 class="font-semibold text-base text-black dark:text-white truncate">{{ getContactName(hist.number) }}</h3>
@@ -43,13 +65,18 @@
         </div>
 
         <!-- Direct Call Option -->
-        <div v-if="phoneNumber" @click="startCall(phoneNumber)" class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 active:bg-gray-200 dark:active:bg-slate-800 cursor-pointer rounded-xl px-2 transition-colors">
-          <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white shadow-md shadow-green-500/20 shrink-0">
-             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </div>
+        <div v-if="phoneNumber" class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 active:bg-gray-200 dark:active:bg-slate-800 cursor-pointer rounded-xl px-2 transition-colors">
           <div class="flex-1">
              <h3 class="font-semibold text-lg text-black dark:text-white">Llamar a</h3>
              <p class="text-green-500 font-bold text-sm font-mono mt-0.5">{{ phoneNumber }}</p>
+          </div>
+          <div class="flex gap-2">
+            <button @click="startCall(phoneNumber, false)" class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white shadow-md shadow-green-500/20 shrink-0 active:scale-90 transition-transform">
+               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+            </button>
+            <button @click="startCall(phoneNumber, true)" class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0 active:scale-90 transition-transform">
+               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </button>
           </div>
         </div>
 
@@ -57,7 +84,6 @@
         <div 
           v-for="contact in filteredContacts" 
           :key="contact.id"
-          @click="startCall(contact.id)"
           class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 cursor-pointer active:bg-gray-200 dark:active:bg-slate-800 rounded-xl px-2 transition-colors mt-1"
         >
           <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold text-lg shadow-inner shrink-0">
@@ -67,9 +93,14 @@
             <h3 class="font-semibold text-lg text-black dark:text-white truncate">{{ contact.name }}</h3>
             <p class="text-gray-500 dark:text-gray-400 text-sm font-mono mt-0.5">{{ formatPhone(contact.id) }}</p>
           </div>
-          <button class="text-green-500 p-2 shrink-0 active:scale-90 transition-transform">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </button>
+          <div class="flex gap-1">
+            <button @click.stop="startCall(contact.id, false)" class="text-green-500 p-2 shrink-0 active:scale-90 transition-transform">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+            </button>
+            <button @click.stop="startCall(contact.id, true)" class="text-blue-500 p-2 shrink-0 active:scale-90 transition-transform">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -89,7 +120,6 @@
         <div 
           v-for="contact in contactsStore.list" 
           :key="contact.id"
-          @click="startCall(contact.id)"
           class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer active:bg-gray-200 dark:active:bg-slate-800 rounded-xl px-2 transition-colors"
         >
           <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold text-lg shadow-inner shrink-0">
@@ -99,9 +129,14 @@
             <h3 class="font-semibold text-lg text-black dark:text-white truncate">{{ contact.name }}</h3>
             <p class="text-gray-500 dark:text-gray-400 text-sm font-mono mt-0.5">{{ formatPhone(contact.id) }}</p>
           </div>
-          <button class="text-green-500 p-2 shrink-0 active:scale-90 transition-transform">
-             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </button>
+          <div class="flex gap-1">
+            <button @click.stop="startCall(contact.id, false)" class="text-green-500 p-2 shrink-0 active:scale-90 transition-transform">
+               <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+            </button>
+            <button @click.stop="startCall(contact.id, true)" class="text-blue-500 p-2 shrink-0 active:scale-90 transition-transform">
+               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -125,7 +160,7 @@
         <span class="text-[11px] font-semibold">Contactos</span>
       </button>
     </div>
-
+    </template>
 
   </div>
 </template>
@@ -134,9 +169,19 @@
 import { ref, computed } from 'vue'
 import { useContactsStore } from '../store/contacts'
 import { useCallStore } from '../store/call'
+import { useSettingsStore } from '../store/settings'
+import { useKernelStore } from '../store/kernel'
 
 const contactsStore = useContactsStore()
 const callStore = useCallStore()
+const settingsStore = useSettingsStore()
+const kernelStore = useKernelStore()
+
+const hasNumber = computed(() => !!settingsStore.phoneNumber)
+
+const goToSettings = () => {
+  kernelStore.openApp({ id: 'settings', name: 'Ajustes', ramRequired: 512, component: 'settings' })
+}
 
 const activeTab = ref('keypad')
 const phoneNumber = ref('')
@@ -178,7 +223,8 @@ const filteredContacts = computed(() => {
   })
 })
 
-const startCall = (targetId) => {
-  callStore.startCall(targetId)
+const startCall = (targetId, isVideo = false) => {
+  if (!targetId) return
+  callStore.startCall(targetId.toString().replace(/\D/g, ''), isVideo)
 }
 </script>

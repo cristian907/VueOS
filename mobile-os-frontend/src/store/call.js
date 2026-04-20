@@ -15,6 +15,7 @@ export const useCallStore = defineStore('call', () => {
   
   const callState = ref('IDLE') // IDLE, CALLING, RINGING, ACTIVE
   const remoteNumber = ref(null)
+  const isVideoCall = ref(false)
   const callDuration = ref(0)
   const callHistory = ref(JSON.parse(localStorage.getItem('os_call_history') || '[]'))
   const callDirection = ref(null)
@@ -28,7 +29,7 @@ export const useCallStore = defineStore('call', () => {
 
   watch(callState, (newState) => {
     if (newState === 'ACTIVE') {
-      addCallToHistory(remoteNumber.value, callDirection.value)
+      addCallToHistory(remoteNumber.value, callDirection.value, isVideoCall.value)
       callDuration.value = 0
       timerInterval = setInterval(() => {
         callDuration.value++
@@ -41,8 +42,14 @@ export const useCallStore = defineStore('call', () => {
     }
   })
 
-  const addCallToHistory = (number, type) => {
-    callHistory.value.unshift({ number, type, date: new Date().toISOString() })
+  // type: 'outgoing' | 'incoming'
+  const addCallToHistory = (number, type, isVideo) => {
+    callHistory.value.unshift({
+      number,
+      type,
+      isVideo,
+      date: new Date().toISOString()
+    })
     if (callHistory.value.length > 50) callHistory.value.pop()
     localStorage.setItem('os_call_history', JSON.stringify(callHistory.value))
   }
@@ -90,24 +97,25 @@ export const useCallStore = defineStore('call', () => {
     }
   }
 
-  const getMedia = async () => {
+  const getMedia = async (isVideo = false) => {
     try {
-      localStream.value = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      localStream.value = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideo })
       return true
     } catch (err) {
-      console.error('[WebRTC] Error accediendo al micrófono:', err)
-      alert('Se necesita permiso de micrófono para realizar la llamada.')
+      console.error('[WebRTC] Error accediendo a media:', err)
+      alert('Se necesitan permisos de cámara/micrófono para realizar la llamada.')
       return false
     }
   }
 
   // --- ACTIONS ---
 
-  const startCall = async (targetNumber) => {
+  const startCall = async (targetNumber, isVideo = false) => {
     if (callState.value !== 'IDLE') return
     if (!targetNumber) return
 
-    const hasMedia = await getMedia()
+    isVideoCall.value = isVideo
+    const hasMedia = await getMedia(isVideo)
     if (!hasMedia) return
 
     callState.value = 'CALLING'
@@ -127,7 +135,8 @@ export const useCallStore = defineStore('call', () => {
       
       networkStore.sendSignal(targetNumber, {
         type: 'offer',
-        sdp: offer
+        sdp: offer,
+        isVideo: isVideo
       })
     } catch (err) {
       console.error('[WebRTC] Error creando offer:', err)
@@ -138,7 +147,7 @@ export const useCallStore = defineStore('call', () => {
   const acceptCall = async () => {
     if (callState.value !== 'RINGING') return
     
-    const hasMedia = await getMedia()
+    const hasMedia = await getMedia(isVideoCall.value)
     if (!hasMedia) {
       rejectCall()
       return
@@ -192,6 +201,7 @@ export const useCallStore = defineStore('call', () => {
       remoteNumber.value = sender
       callState.value = 'RINGING'
       callDirection.value = 'incoming'
+      isVideoCall.value = !!payload.isVideo
       
       setupPeerConnection(sender)
       await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp))
@@ -226,6 +236,7 @@ export const useCallStore = defineStore('call', () => {
     remoteNumber,
     callDuration,
     callHistory,
+    isVideoCall,
     localStream,
     remoteStream,
     startCall,

@@ -13,7 +13,7 @@ const (
 	writeWait      = 10 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 512000 // Aumentado para soportar payloads grandes si es necesario
+	maxMessageSize = 5242880 // Aumentado a 5MB para soportar fotos Base64
 )
 
 var upgrader = websocket.Upgrader{

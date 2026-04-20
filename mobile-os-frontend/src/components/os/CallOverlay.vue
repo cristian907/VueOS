@@ -1,7 +1,15 @@
 <template>
-  <div v-if="callStore.callState !== 'IDLE'" class="absolute inset-0 z-[100] bg-black/80 backdrop-blur-xl flex flex-col justify-between items-center py-16 px-6 animate-fade-in text-white">
+  <div v-if="callStore.callState !== 'IDLE'" class="absolute inset-0 z-[100] flex flex-col justify-between items-center py-16 px-6 animate-fade-in text-white overflow-hidden"
+       :class="callStore.isVideoCall && callStore.callState === 'ACTIVE' ? 'bg-black/30' : 'bg-black/80 backdrop-blur-xl'">
+    
+    <!-- Videos (sólo en videollamada activa) -->
+    <template v-if="callStore.isVideoCall">
+      <video ref="remoteVideo" autoplay playsinline class="absolute inset-0 w-full h-full object-cover z-0"></video>
+      <video ref="localVideo" autoplay playsinline muted class="absolute top-16 right-4 w-24 h-40 object-cover rounded-2xl shadow-2xl z-10 border border-white/20 bg-gray-900"></video>
+    </template>
+
     <!-- Info superior -->
-    <div class="text-center mt-10">
+    <div class="text-center mt-10 z-20">
       <div class="w-24 h-24 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full flex items-center justify-center text-4xl mb-4 mx-auto shadow-2xl border border-gray-600">
          {{ remoteContact ? remoteContact.avatar : '👤' }}
       </div>
@@ -17,7 +25,7 @@
     </div>
 
     <!-- Controles inferiores -->
-    <div class="flex gap-10 w-full justify-center mb-10">
+    <div class="flex gap-10 w-full justify-center mb-10 z-20">
       <!-- RINGING: Aceptar / Rechazar -->
       <template v-if="callStore.callState === 'RINGING'">
         <button @click="callStore.rejectCall" class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-red-500/20">
@@ -41,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, watchEffect } from 'vue'
 import { useCallStore } from '../../store/call'
 import { useContactsStore } from '../../store/contacts'
 
@@ -49,10 +57,18 @@ const callStore = useCallStore()
 const contactsStore = useContactsStore()
 
 const remoteAudio = ref(null)
+const remoteVideo = ref(null)
+const localVideo = ref(null)
 
-watch(() => callStore.remoteStream, (newStream) => {
-  if (remoteAudio.value && newStream) {
-    remoteAudio.value.srcObject = newStream
+watchEffect(() => {
+  if (remoteAudio.value && callStore.remoteStream && !callStore.isVideoCall) {
+    remoteAudio.value.srcObject = callStore.remoteStream
+  }
+  if (remoteVideo.value && callStore.remoteStream && callStore.isVideoCall) {
+    remoteVideo.value.srcObject = callStore.remoteStream
+  }
+  if (localVideo.value && callStore.localStream && callStore.isVideoCall) {
+    localVideo.value.srcObject = callStore.localStream
   }
 })
 

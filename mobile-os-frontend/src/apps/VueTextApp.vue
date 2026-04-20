@@ -103,34 +103,80 @@
         <div 
           v-for="msg in currentMessages" 
           :key="msg.id"
-          class="max-w-[80%] rounded-2xl px-4 py-2 flex flex-col"
-          :class="msg.sender === settings.phoneNumber ? 'self-end bg-blue-500 text-white rounded-br-sm' : 'self-start bg-gray-200 dark:bg-slate-700 text-black dark:text-white rounded-bl-sm'"
+          class="max-w-[80%] flex flex-col"
+          :class="msg.sender === settings.phoneNumber ? 'self-end items-end' : 'self-start items-start'"
         >
-          <span class="text-[15px] leading-snug break-words">{{ msg.text }}</span>
-          <span 
-            class="text-[10px] mt-1 self-end opacity-70"
-          >{{ new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
+          <!-- Imagen -->
+          <template v-if="msg.blob">
+            <div :class="msg.sender === settings.phoneNumber ? 'rounded-2xl rounded-br-sm overflow-hidden' : 'rounded-2xl rounded-bl-sm overflow-hidden'">
+              <img 
+                :src="blobUrl(msg.blob)" 
+                class="max-w-[220px] max-h-[280px] object-cover cursor-pointer block"
+                @click="previewImage(msg.blob)"
+              />
+            </div>
+          </template>
+          <!-- Texto o texto+imagen -->
+          <div v-if="msg.text"
+            class="px-4 py-2 rounded-2xl flex flex-col mt-0.5"
+            :class="msg.sender === settings.phoneNumber ? 'bg-blue-500 text-white rounded-br-sm' : 'bg-gray-200 dark:bg-slate-700 text-black dark:text-white rounded-bl-sm'"
+          >
+            <span class="text-[15px] leading-snug break-words">{{ msg.text }}</span>
+          </div>
+          <span class="text-[10px] mt-1 opacity-50 text-gray-500 dark:text-gray-400">
+            {{ new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+          </span>
         </div>
       </div>
 
       <!-- Input Area -->
-      <div class="px-3 pt-3 pb-8 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shrink-0 flex items-end gap-2">
-        <div class="flex-1 bg-neutral-100 dark:bg-slate-700 rounded-2xl border border-transparent dark:border-slate-600 focus-within:border-blue-500 overflow-hidden px-4 py-2 flex items-center min-h-[44px]">
-          <input 
-            v-model="newMessage" 
-            @keyup.enter="sendChat"
-            type="text" 
-            placeholder="Mensaje" 
-            class="w-full bg-transparent text-black dark:text-white focus:outline-none"
-          />
+      <div class="px-3 pt-3 pb-8 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shrink-0">
+        <!-- Menú adjuntar (si está abierto) -->
+        <div v-if="showAttachMenu" class="flex gap-3 mb-2 justify-start px-1">
+          <button @click="openCameraOverlay" class="flex flex-col items-center gap-1 text-blue-500 active:scale-90 transition-transform">
+            <div class="w-11 h-11 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </div>
+            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Cámara</span>
+          </button>
+          <button @click="openGalleryOverlay" class="flex flex-col items-center gap-1 text-purple-500 active:scale-90 transition-transform">
+            <div class="w-11 h-11 bg-purple-100 dark:bg-purple-900/40 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </div>
+            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Galería</span>
+          </button>
+          <button @click="triggerFile" class="flex flex-col items-center gap-1 text-gray-500 active:scale-90 transition-transform">
+            <div class="w-11 h-11 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+            </div>
+            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Archivo</span>
+          </button>
         </div>
-        <button 
-          @click="sendChat" 
-          :disabled="!newMessage.trim() || !network.isRegistered"
-          class="w-11 h-11 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:scale-100 active:scale-95 transition-all"
-        >
-          <svg class="w-5 h-5 ml-1 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-        </button>
+        <!-- Row de input -->
+        <div class="flex items-end gap-2">
+          <button @click="showAttachMenu = !showAttachMenu" class="w-10 h-10 mb-0.5 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center shrink-0 active:scale-90 transition-all text-gray-500 dark:text-gray-300"
+            :class="showAttachMenu ? 'rotate-45 bg-red-100 dark:bg-red-900/30 text-red-500' : ''"
+          >
+            <svg class="w-5 h-5 transition-transform" :style="showAttachMenu ? 'transform: rotate(45deg)' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          </button>
+          <div class="flex-1 bg-neutral-100 dark:bg-slate-700 rounded-2xl border border-transparent dark:border-slate-600 focus-within:border-blue-500 overflow-hidden px-4 py-2 flex items-center min-h-[44px]">
+            <input 
+              v-model="newMessage" 
+              @keyup.enter="sendChat"
+              type="text" 
+              placeholder="Mensaje" 
+              class="w-full bg-transparent text-black dark:text-white focus:outline-none"
+            />
+          </div>
+          <button 
+            @click="sendChat" 
+            :disabled="!newMessage.trim() || !network.isRegistered"
+            class="w-11 h-11 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 disabled:opacity-50 disabled:scale-100 active:scale-95 transition-all"
+          >
+            <svg class="w-5 h-5 ml-1 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+          </button>
+        </div>
+        <!-- Inputs ocultos (al final, siempre renderizados) -->
       </div>
     </div>
 
@@ -244,11 +290,80 @@
       </div>
     </div>
 
+    <!-- VISOR DE IMAGEN COMPLETO -->
+    <div v-if="previewBlob" class="absolute inset-0 z-[80] bg-black flex flex-col" @click="previewBlob = null">
+      <div class="absolute top-4 right-4 z-10">
+        <button @click.stop="previewBlob = null" class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="flex-1 flex items-center justify-center p-4">
+        <img :src="blobUrl(previewBlob)" class="max-w-full max-h-full object-contain rounded-lg" @click.stop />
+      </div>
+    </div>
+
+    <!-- OVERLAY: CÁMARA INTEGRADA -->
+    <div v-if="showCameraOverlay" class="absolute inset-0 z-[90] bg-black flex flex-col">
+      <div class="absolute top-4 left-4 z-20">
+        <button @click="closeCameraOverlay" class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <!-- Visor -->
+      <div class="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+        <video ref="camVideo" autoplay playsinline class="w-full h-full object-cover" :class="camFacing === 'user' ? '-scale-x-100' : ''"></video>
+        <div v-if="camFlash" class="absolute inset-0 bg-white z-10"></div>
+      </div>
+      <!-- Controles -->
+      <div class="h-32 bg-black flex items-center justify-around px-8 pb-4">
+        <!-- Girar cámara -->
+        <button @click="toggleCamFacing" class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        </button>
+        <!-- Disparador -->
+        <button @click="captureAndSend" class="w-20 h-20 rounded-full bg-white/30 border-[4px] border-white flex items-center justify-center active:scale-90 transition-transform">
+          <div class="w-[66px] h-[66px] bg-white rounded-full"></div>
+        </button>
+        <div class="w-12 h-12"></div>
+      </div>
+      <canvas ref="camCanvas" class="hidden"></canvas>
+    </div>
+
+    <!-- OVERLAY: GALERIA INTEGRADA -->
+    <div v-if="showGalleryOverlay" class="absolute inset-0 z-[90] bg-white dark:bg-black flex flex-col">
+      <div class="flex items-center gap-3 px-4 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800">
+        <button @click="showGalleryOverlay = false" class="text-blue-500 flex items-center gap-1 active:opacity-70">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          Cancelar
+        </button>
+        <h2 class="text-lg font-bold text-black dark:text-white">Seleccionar Foto</h2>
+      </div>
+      <div class="flex-1 overflow-y-auto p-1">
+        <div v-if="galleryPhotos.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400 mt-10">
+          <svg class="w-12 h-12 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          <p>No hay fotos en la Galería</p>
+        </div>
+        <div class="grid grid-cols-3 gap-1">
+          <div 
+            v-for="p in galleryPhotos" 
+            :key="p.id"
+            @click="sendGalleryPhoto(p.blob)"
+            class="aspect-square bg-gray-200 dark:bg-slate-800 cursor-pointer overflow-hidden active:opacity-60 transition-opacity"
+          >
+            <img :src="p.url" class="w-full h-full object-cover" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solo el input de Archivo queda nativo -->
+    <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleImageSelected" />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useSettingsStore } from '../store/settings'
 import { useKernelStore } from '../store/kernel'
 import { useNetworkStore } from '../store/network'
@@ -295,9 +410,148 @@ const currentMessages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
 
-// Modal de Buscar Contactos
-const showContactsModal = ref(false)
+// Adjuntar imágenes
+const showAttachMenu = ref(false)
+const fileInput = ref(null)
+const previewBlob = ref(null)
+
+const blobUrl = (blob) => blob ? URL.createObjectURL(blob) : ''
+
+const previewImage = (blob) => {
+  previewBlob.value = blob
+}
+
+// ---- Overlay Cámara ----
+const showCameraOverlay = ref(false)
+const camVideo = ref(null)
+const camCanvas = ref(null)
+const camFacing = ref('environment')
+const camFlash = ref(false)
+let camStream = null
+
+const openCameraOverlay = async () => {
+  showAttachMenu.value = false
+  showCameraOverlay.value = true
+  await nextTick()
+  await startCamStream()
+}
+
+const closeCameraOverlay = () => {
+  showCameraOverlay.value = false
+  stopCamStream()
+}
+
+const startCamStream = async () => {
+  stopCamStream()
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing.value }, audio: false })
+    if (camVideo.value) camVideo.value.srcObject = camStream
+  } catch (e) { console.error('[Cam]', e) }
+}
+
+const stopCamStream = () => {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null }
+  if (camVideo.value) camVideo.value.srcObject = null
+}
+
+const toggleCamFacing = () => {
+  camFacing.value = camFacing.value === 'user' ? 'environment' : 'user'
+  startCamStream()
+}
+
+const captureAndSend = async () => {
+  if (!camStream || !camVideo.value) return
+  camFlash.value = true
+  setTimeout(() => camFlash.value = false, 120)
+
+  const video = camVideo.value
+  const canvas = camCanvas.value
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  const ctx = canvas.getContext('2d')
+  if (camFacing.value === 'user') { ctx.translate(canvas.width, 0); ctx.scale(-1, 1) }
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  // Comprimir y enviar
+  const base64 = canvas.toDataURL('image/jpeg', 0.78)
+  closeCameraOverlay()
+  try {
+    await network.sendMessage(activeChat.value, '', base64)
+  } catch (err) {
+    alert('No se pudo enviar: ' + err.message)
+  }
+}
+
+// ---- Overlay Galería ----
+const showGalleryOverlay = ref(false)
+const galleryPhotos = ref([])
+
+const openGalleryOverlay = async () => {
+  showAttachMenu.value = false
+  // Cargar fotos de db.photos
+  const records = await db.photos.reverse().toArray()
+  galleryPhotos.value = records.map(r => ({ id: r.id, blob: r.blob, url: URL.createObjectURL(r.blob) }))
+  showGalleryOverlay.value = true
+}
+
+const sendGalleryPhoto = async (blob) => {
+  showGalleryOverlay.value = false
+  const base64 = await blobToBase64(blob)
+  try {
+    await network.sendMessage(activeChat.value, '', base64)
+  } catch (err) {
+    alert('No se pudo enviar: ' + err.message)
+  }
+}
+
+const blobToBase64 = (blob) => new Promise((resolve) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.readAsDataURL(blob)
+})
+
+// ---- Solo archivo nativo (sin cámara/galería overlay) ----
+
+const triggerFile = () => {
+  showAttachMenu.value = false
+  setTimeout(() => fileInput.value?.click(), 50)
+}
+
+const compressImage = (file, maxPx = 1024, quality = 0.78) => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.src = url
+  })
+}
+
+const handleImageSelected = async (e) => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file || !activeChat.value) return
+  try {
+    const base64 = await compressImage(file)
+    await network.sendMessage(activeChat.value, '', base64)
+  } catch (err) {
+    console.error('[VueText] Error enviando imagen:', err)
+    alert('No se pudo enviar la imagen: ' + err.message)
+  }
+}
 const searchQuery = ref('')
+const showContactsModal = ref(false)
 
 const handleSearchInput = (e) => {
   let val = e.target.value
@@ -428,9 +682,10 @@ const sendChat = async () => {
   if (!text) return
   
   newMessage.value = ''
+  showAttachMenu.value = false
   
   try {
-    await network.sendMessage(activeChat.value, text)
+    await network.sendMessage(activeChat.value, text, null)
   } catch (err) {
     console.error(err)
     alert('No se pudo enviar el mensaje: ' + err.message)
