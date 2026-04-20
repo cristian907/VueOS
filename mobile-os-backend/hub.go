@@ -15,8 +15,11 @@ type Hub struct {
 	// Register requests from the clients.
 	register chan *Client
 
-	// Unregister requests from clients.
+	// Unregister requests from clients (disconnect).
 	unregister chan *Client
+
+	// Deregister: liberar número sin desconectar el socket
+	deregister chan *Client
 
 	mu sync.Mutex
 }
@@ -26,6 +29,7 @@ func newHub() *Hub {
 		broadcast:  make(chan *Message),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		deregister: make(chan *Client),
 		clients:    make(map[string]*Client),
 	}
 }
@@ -35,24 +39,32 @@ func (h *Hub) run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
-			// Evitamos registrar si no tiene número virtual asignado todavía
-			if client.phoneNumber != "" {
-				// Revisar si ya hay alguien conectado con ese número
-				if _, ok := h.clients[client.phoneNumber]; ok {
-					// El número ya está en uso
-					log.Printf("❌ Intento de registro denegado (En uso): %s", client.phoneNumber)
-					// Informar al cliente que hay error (evitamos usar el send channel si podemos mandar directo, pero readPump/writePump usan send)
+			if client.isClosed {
+				h.mu.Unlock()
+				continue
+			}
+			requested := client.pendingNumber
+			client.pendingNumber = "" // Limpiar siempre, haya éxito o no
+
+			if requested != "" {
+				if _, ok := h.clients[requested]; ok {
+					// Número en uso — NO se toca client.phoneNumber (se preserva el número actual)
+					log.Printf("❌ Intento de registro denegado (En uso): %s", requested)
 					client.send <- &Message{
-						Type: "error",
+						Type:    "error",
 						Payload: "El Número Virtual ya está en uso por otro dispositivo.",
 					}
 				} else {
-					// Registrar exitosamente
+					// Liberar el número anterior si tenía uno
+					if client.phoneNumber != "" {
+						delete(h.clients, client.phoneNumber)
+					}
+					// Solo ahora confirmamos el nuevo número
+					client.phoneNumber = requested
 					h.clients[client.phoneNumber] = client
 					log.Printf("📱 Registrado: %s (Total: %d)", client.phoneNumber, len(h.clients))
-					// Informar al cliente de su éxito
 					client.send <- &Message{
-						Type: "register_success",
+						Type:    "register_success",
 						Payload: "Registrado con éxito en la red.",
 					}
 				}
@@ -61,11 +73,28 @@ func (h *Hub) run() {
 
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client.phoneNumber]; ok {
-				delete(h.clients, client.phoneNumber)
-				close(client.send)
-				log.Printf("🔌 Desconectado: %s (Total: %d)", client.phoneNumber, len(h.clients))
+			if existingClient, ok := h.clients[client.phoneNumber]; ok {
+				if existingClient == client {
+					delete(h.clients, client.phoneNumber)
+					log.Printf("🔌 Desconectado: %s (Total: %d)", client.phoneNumber, len(h.clients))
+				}
 			}
+			if !client.isClosed {
+				client.isClosed = true
+				close(client.send)
+			}
+			h.mu.Unlock()
+
+		case client := <-h.deregister:
+			// Liberar número sin cerrar el socket
+			h.mu.Lock()
+			if existingClient, ok := h.clients[client.phoneNumber]; ok {
+				if existingClient == client {
+					delete(h.clients, client.phoneNumber)
+					log.Printf("🟡 Liberado número: %s (Total: %d)", client.phoneNumber, len(h.clients))
+				}
+			}
+			client.phoneNumber = ""
 			h.mu.Unlock()
 
 		case message := <-h.broadcast:
@@ -78,7 +107,10 @@ func (h *Hub) run() {
 						log.Printf("✉️ Mensaje enrutado: %s -> %s", message.SenderNumber, message.TargetNumber)
 					default:
 						// No se pudo enviar (buffer lleno), desconectar
-						close(targetClient.send)
+						if !targetClient.isClosed {
+							targetClient.isClosed = true
+							close(targetClient.send)
+						}
 						delete(h.clients, targetClient.phoneNumber)
 					}
 				} else {

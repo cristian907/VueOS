@@ -87,17 +87,15 @@
           >
             0
           </button>
-          <button 
-            @click="deleteDigit" 
-            class="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
-          >
-            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l7-9v5h11l-7 9v-5H3z"></path></svg>
-          </button>
+          <div></div>
         </div>
 
-        <!-- Cancelar (volver al reloj) -->
-        <button @click="goBackToClock" class="mt-8 text-white/40 text-sm hover:text-white/60 transition-colors">
+        <!-- Cancelar / Borrar -->
+        <button v-if="pinInput.length === 0" @click="goBackToClock" class="mt-8 text-white/80 font-medium text-sm active:opacity-70 transition-opacity">
           Cancelar
+        </button>
+        <button v-else @click="deleteDigit" class="mt-8 text-white/80 font-medium text-sm active:opacity-70 transition-opacity">
+          Borrar
         </button>
       </div>
     </div>

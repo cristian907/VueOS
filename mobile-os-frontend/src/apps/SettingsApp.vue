@@ -161,26 +161,33 @@
           <p class="text-sm text-neutral-500 dark:text-slate-400">Este número identificará tu dispositivo en la red P2P para llamadas y mensajes.</p>
           
           <!-- Feedback -->
-          <div v-if="phoneFeedback" class="bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800/50 dark:text-green-400 p-3 rounded-xl text-sm font-medium flex items-center gap-2">
-            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            {{ phoneFeedback }}
+          <div v-if="phoneFeedback" 
+               class="p-3 rounded-xl text-sm font-medium flex items-center gap-2 border transition-colors"
+               :class="network.connectionError || phoneFeedback.includes('responde') ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800/50 dark:text-red-400' : (isSaving ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800/50 dark:text-blue-400' : 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800/50 dark:text-green-400')">
+            <svg v-if="isSaving" class="animate-spin w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <svg v-else-if="network.connectionError || phoneFeedback.includes('responde')" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg v-else class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span>{{ phoneFeedback }}</span>
           </div>
-
           <div>
             <label class="text-sm text-neutral-500 dark:text-slate-400 block mb-1">Número Virtual</label>
             <input 
               v-model="phoneInput" 
+              @input="handlePhoneInput"
+              :disabled="isSaving"
               type="tel" 
-              maxlength="15"
-              placeholder="Ej: 0414-123-4567"
-              class="w-full bg-neutral-100 dark:bg-slate-700 rounded-xl px-4 py-3 text-black dark:text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-neutral-300 dark:placeholder-slate-500"
+              inputmode="numeric"
+              class="w-full bg-neutral-100 dark:bg-slate-700 rounded-xl px-4 py-3 text-black dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder-neutral-300 dark:placeholder-slate-500 disabled:opacity-50"
+              placeholder="0414-1234567"
             />
           </div>
           <button 
             @click="handleSavePhone" 
-            class="w-full bg-blue-500 text-white py-3 rounded-xl font-semibold text-base active:scale-[0.98] transition-transform hover:bg-blue-600"
+            :disabled="isSaving"
+            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 mt-2 active:scale-95 transition-transform flex justify-center items-center gap-2 disabled:opacity-70 disabled:scale-100"
           >
-            Guardar Número
+            <svg v-if="isSaving" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            {{ isSaving ? 'Verificando red...' : 'Guardar' }}
           </button>
         </div>
 
@@ -198,10 +205,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useSettingsStore } from '../store/settings'
+import { useNetworkStore } from '../store/network'
 
 const settingsStore = useSettingsStore()
+const network = useNetworkStore()
 
 // --- Navegación interna ---
 const activeSection = ref(null)
@@ -243,16 +252,62 @@ const handleToggleTheme = () => {
 }
 
 // --- Red (Número Virtual) ---
-const phoneInput = ref(settingsStore.phoneNumber)
+// Formateamos visualmente para que se vea el guion si viene de la DB (aunque allí no tenga)
+const initialPhone = settingsStore.phoneNumber 
+  ? (settingsStore.phoneNumber.length > 4 ? settingsStore.phoneNumber.substring(0,4) + '-' + settingsStore.phoneNumber.substring(4) : settingsStore.phoneNumber)
+  : ''
+const phoneInput = ref(initialPhone)
 const phoneFeedback = ref('')
+const isSaving = ref(false)
+
+const handlePhoneInput = (e) => {
+  let val = e.target.value.replace(/\D/g, '')
+  if (val.length > 11) val = val.substring(0, 11)
+  if (val.length > 4) val = val.substring(0, 4) + '-' + val.substring(4)
+  phoneInput.value = val
+}
 
 const handleSavePhone = () => {
-  if (!phoneInput.value.trim()) {
+  const cleanPhone = phoneInput.value.replace(/-/g, '')
+  if (!cleanPhone) {
     phoneFeedback.value = ''
     return
   }
-  settingsStore.setPhoneNumber(phoneInput.value.trim())
-  phoneFeedback.value = 'Número guardado correctamente.'
-  setTimeout(() => { phoneFeedback.value = '' }, 3000)
+
+  if (cleanPhone === settingsStore.phoneNumber && network.isRegistered) {
+    phoneFeedback.value = 'Número registrado y en línea.'
+    setTimeout(() => { phoneFeedback.value = '' }, 3000)
+    return
+  }
+  
+  isSaving.value = true
+  phoneFeedback.value = ''
+  network.connectionError = ''
+  
+  // Esto dispara el registro en network.js
+  settingsStore.setPhoneNumber(cleanPhone)
+  
+  const unwatch = watch(() => [network.isRegistered, network.connectionError], ([reg, err]) => {
+    if (reg) {
+      unwatch()
+      isSaving.value = false
+      phoneFeedback.value = 'Número registrado y en línea.'
+      setTimeout(() => { phoneFeedback.value = '' }, 3000)
+    } else if (err) {
+      unwatch()
+      isSaving.value = false
+      phoneFeedback.value = err // Mostrará "El Número Virtual ya está en uso..."
+    }
+  })
+  
+  // Timeout de seguridad en caso de que el backend esté apagado
+  setTimeout(() => {
+    if (isSaving.value) {
+      unwatch()
+      isSaving.value = false
+      phoneFeedback.value = 'El servidor no responde.'
+      settingsStore.setPhoneNumber('')
+    }
+  }, 5000)
 }
 </script>

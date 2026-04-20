@@ -26,10 +26,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	hub *Hub
-	conn *websocket.Conn
-	send chan *Message
-	phoneNumber string // Se asigna al recibir el primer mensaje "register"
+	hub         *Hub
+	conn        *websocket.Conn
+	send        chan *Message
+	phoneNumber string // Número confirmado por el hub
+	pendingNumber string // Número solicitado, aún no confirmado
+	isClosed    bool
 }
 
 func (c *Client) readPump() {
@@ -57,10 +59,16 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		// Si es un mensaje de registro, actualizamos la identidad del cliente y lo registramos en el hub
+		// Si es un mensaje de registro, guardar el número SOLICITADO en pending (no confirmar aún)
 		if msg.Type == "register" && msg.SenderNumber != "" {
-			c.phoneNumber = msg.SenderNumber
+			c.pendingNumber = msg.SenderNumber // Solo pendiente hasta que el hub lo confirme
 			c.hub.register <- c
+			continue
+		}
+
+		// deregister ya no es necesario con el nuevo flujo, pero lo mantenemos por compatibilidad
+		if msg.Type == "deregister" {
+			c.hub.deregister <- c
 			continue
 		}
 

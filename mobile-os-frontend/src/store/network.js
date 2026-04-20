@@ -2,29 +2,58 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { useSettingsStore } from './settings'
 import { db } from './db'
+import { useCallStore } from './call'
 
 export const useNetworkStore = defineStore('network', () => {
   const settingsStore = useSettingsStore()
-  
+
   const isConnected = ref(false)
   const isRegistered = ref(false)
   const connectionError = ref('')
-  
-  let socket = null
 
-  // Inicializa la conexión
-  const connect = () => {
-    if (socket) {
-      socket.close()
+  let socket = null
+  let reconnectTimer = null // Un único timer global para evitar duplicados
+
+  const clearReconnectTimer = () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
     }
-    
+  }
+
+  const scheduleReconnect = () => {
+    clearReconnectTimer()
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      if (settingsStore.phoneNumber) {
+        connect()
+      }
+    }, 5000)
+  }
+
+  // Cierra el socket actual sin activar la reconexión automática
+  const closeSocket = () => {
+    if (socket) {
+      socket.onopen = null
+      socket.onmessage = null
+      socket.onclose = null
+      socket.onerror = null
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close()
+      }
+      socket = null
+    }
+  }
+
+  const connect = () => {
+    clearReconnectTimer()
+    closeSocket() // Limpiar siempre antes de crear una nueva conexión
+
     socket = new WebSocket('ws://localhost:8080/ws')
 
     socket.onopen = () => {
       console.log('[Network] WebSocket conectado.')
       isConnected.value = true
-      
-      // Si tenemos un número configurado, intentar registrar
       if (settingsStore.phoneNumber) {
         register(settingsStore.phoneNumber)
       }
@@ -33,46 +62,48 @@ export const useNetworkStore = defineStore('network', () => {
     socket.onmessage = async (event) => {
       try {
         const msg = JSON.parse(event.data)
-        
+
         if (msg.type === 'register_success') {
           console.log('[Network] Registro P2P exitoso.')
           isRegistered.value = true
           connectionError.value = ''
-        } 
+        }
         else if (msg.type === 'error') {
           console.error('[Network] Error del servidor:', msg.payload)
           connectionError.value = msg.payload
           isRegistered.value = false
-          // Borrar el número inválido/duplicado de settings
+          // El servidor rechazó el número: limpiar sin cerrar el socket
           settingsStore.setPhoneNumber('')
         }
         else if (msg.type === 'chat') {
-          console.log(`[Network] Mensaje recibido de ${msg.senderNumber}`)
-          // Guardar en la BD local
           await db.messages.add({
-            chatWith: msg.senderNumber, // Agruparemos la conversación por quien envía
+            chatWith: msg.senderNumber,
             sender: msg.senderNumber,
             text: msg.payload,
             date: msg.timestamp || new Date().toISOString()
           })
+        }
+        else if (msg.type === 'signal') {
+          const callStore = useCallStore()
+          callStore.handleIncomingSignal(msg.senderNumber, msg.payload)
         }
       } catch (e) {
         console.error('[Network] Fallo al parsear mensaje:', e)
       }
     }
 
-    socket.onclose = () => {
-      console.log('[Network] WebSocket desconectado.')
+    socket.onclose = (event) => {
+      console.log('[Network] WebSocket desconectado, código:', event.code)
       isConnected.value = false
       isRegistered.value = false
-      // Intentar reconectar en 5 segundos si sigue siendo necesario
-      setTimeout(() => {
-        if (settingsStore.phoneNumber) connect()
-      }, 5000)
+      // Reconectar solo si hay un número configurado
+      if (settingsStore.phoneNumber) {
+        scheduleReconnect()
+      }
     }
-    
-    socket.onerror = (error) => {
-      console.error('[Network] Error de WebSocket:', error)
+
+    socket.onerror = () => {
+      // onerror siempre va seguido de onclose, así que no hacemos nada extra
       isConnected.value = false
     }
   }
@@ -86,11 +117,17 @@ export const useNetworkStore = defineStore('network', () => {
     }
   }
 
+  const deregister = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'deregister' }))
+    }
+  }
+
   const sendMessage = async (targetNumber, text) => {
     if (!socket || socket.readyState !== WebSocket.OPEN || !isRegistered.value) {
       throw new Error('No hay conexión a la red P2P.')
     }
-    
+
     const msgData = {
       type: 'chat',
       senderNumber: settingsStore.phoneNumber,
@@ -99,29 +136,49 @@ export const useNetworkStore = defineStore('network', () => {
       timestamp: new Date().toISOString()
     }
 
-    // Enviar al server
     socket.send(JSON.stringify(msgData))
 
-    // Guardar en nuestra base de datos local (como enviado)
     await db.messages.add({
-      chatWith: targetNumber, // Agruparemos por el destinatario
+      chatWith: targetNumber,
       sender: settingsStore.phoneNumber,
       text: text,
       date: msgData.timestamp
     })
   }
 
-  // Si el número de configuración cambia, forzar registro (o reconexión)
-  watch(() => settingsStore.phoneNumber, (newNumber) => {
+  const sendSignal = (targetNumber, payload) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN || !isRegistered.value) {
+      console.warn('[Network] No se puede enviar señal, sin conexión P2P.')
+      return
+    }
+    socket.send(JSON.stringify({
+      type: 'signal',
+      senderNumber: settingsStore.phoneNumber,
+      targetNumber: targetNumber,
+      payload: payload,
+      timestamp: new Date().toISOString()
+    }))
+  }
+
+  // Watcher: reacciona a cambios en el número configurado
+  watch(() => settingsStore.phoneNumber, (newNumber, oldNumber) => {
     if (newNumber) {
       if (!isConnected.value) {
+        // No hay conexión: crear una nueva
         connect()
+      } else if (newNumber !== oldNumber) {
+        // Cambio de número: liberar el anterior y pedir el nuevo en el mismo socket
+        if (oldNumber) deregister()
+        register(newNumber)
       } else {
+        // Mismo número, posiblemente perdimos sesión: re-registrar
         register(newNumber)
       }
     } else {
+      // Sin número: liberar en servidor, cancelar reconexión automática
+      clearReconnectTimer()
       isRegistered.value = false
-      if (socket) socket.close()
+      deregister()
     }
   }, { immediate: true })
 
@@ -129,6 +186,7 @@ export const useNetworkStore = defineStore('network', () => {
     isConnected,
     isRegistered,
     connectionError,
-    sendMessage
+    sendMessage,
+    sendSignal
   }
 })
