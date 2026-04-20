@@ -55,8 +55,21 @@
             {{ getContactAvatar(conv.number) }}
           </div>
           <div @click="openChat(conv.number)" class="flex-1 overflow-hidden">
-            <h3 class="font-semibold text-black dark:text-white text-lg truncate">{{ getContactName(conv.number) }}</h3>
-            <p class="text-neutral-500 dark:text-slate-400 text-sm truncate">{{ conv.lastMessage }}</p>
+            <div class="flex items-center gap-2">
+              <h3 class="font-semibold text-black dark:text-white text-lg truncate">{{ getContactName(conv.number) }}</h3>
+              <!-- Punto de notificación -->
+              <div v-if="network.unreadCounts[conv.number]" class="w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)] shrink-0"></div>
+            </div>
+            <p class="text-neutral-500 dark:text-slate-400 text-sm truncate flex items-center gap-1" :class="network.unreadCounts[conv.number] ? 'font-bold text-black dark:text-white' : ''">
+              <span v-if="conv.lastSender === settings.phoneNumber" class="text-blue-500 shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+              </span>
+              <span v-if="conv.isPhoto" class="flex items-center gap-1 opacity-70">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="italic">Imagen</span>
+              </span>
+              <span v-else>{{ conv.lastMessage }}</span>
+            </p>
           </div>
           <!-- Delete button in list -->
           <button @click.stop="confirmDeleteChat(conv.number)" class="text-red-400 dark:text-red-500 p-2 shrink-0 opacity-70 hover:opacity-100 active:scale-90 transition-all">
@@ -638,23 +651,33 @@ let convSubscription = null
 
 onMounted(() => {
   // Observar conversaciones en vivo
-  convSubscription = liveQuery(() => db.messages.orderBy('date').reverse().toArray()).subscribe(allMsgs => {
+  convSubscription = liveQuery(async () => {
+    // Obtenemos todos los mensajes y ordenamos manualmente por fecha descendente
+    const allMsgs = await db.messages.toArray()
+    // Ordenamos por timestamp real para evitar problemas de ordenación de strings
+    allMsgs.sort((a, b) => new Date(b.date) - new Date(a.date))
+    
     const convMap = new Map()
     for (const msg of allMsgs) {
       if (!convMap.has(msg.chatWith)) {
         convMap.set(msg.chatWith, {
           number: msg.chatWith,
           lastMessage: msg.text,
+          lastSender: msg.sender,
+          isPhoto: !!msg.blob,
           date: msg.date
         })
       }
     }
-    conversations.value = Array.from(convMap.values())
+    return Array.from(convMap.values())
+  }).subscribe(convs => {
+    conversations.value = convs
   })
 })
 
 const openChat = (number) => {
   activeChat.value = number
+  network.clearUnread(number)
   
   if (messagesSubscription) messagesSubscription.unsubscribe()
   
@@ -676,6 +699,13 @@ const closeChat = () => {
     messagesSubscription = null
   }
 }
+
+// Si recibimos un mensaje mientras el chat está abierto Y la app está en primer plano, limpiamos la notificación inmediatamente
+watch([() => kernel.foregroundAppId, () => network.unreadCounts[activeChat.value]], ([fgId, count]) => {
+  if (fgId === 'vuetext' && activeChat.value && count > 0) {
+    network.clearUnread(activeChat.value)
+  }
+})
 
 const sendChat = async () => {
   const text = newMessage.value.trim()

@@ -1,2 +1,17 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
+
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  background: #0f172a; /* bg-slate-900 */
+}
+
+/* Prevent scrolling on iOS */
+body {
+  overscroll-behavior-y: none;
+}

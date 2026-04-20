@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useSettingsStore } from './settings'
 import { db } from './db'
 import { useCallStore } from './call'
@@ -10,6 +10,7 @@ export const useNetworkStore = defineStore('network', () => {
   const isConnected = ref(false)
   const isRegistered = ref(false)
   const connectionError = ref('')
+  const unreadCounts = ref({}) // { phoneNumber: count }
 
   let socket = null
   let reconnectTimer = null // Un único timer global para evitar duplicados
@@ -108,6 +109,9 @@ export const useNetworkStore = defineStore('network', () => {
             blob: blob,
             date: msg.timestamp || new Date().toISOString()
           })
+
+          // Notificaciones: incrementar contador si no es señal
+          unreadCounts.value[msg.senderNumber] = (unreadCounts.value[msg.senderNumber] || 0) + 1
         }
         else if (msg.type === 'signal') {
           const callStore = useCallStore()
@@ -225,10 +229,21 @@ export const useNetworkStore = defineStore('network', () => {
     }
   }, { immediate: true })
 
+  const clearUnread = (number) => {
+    if (number) delete unreadCounts.value[number]
+  }
+
+  const totalUnreads = computed(() => {
+    return Object.values(unreadCounts.value).reduce((a, b) => a + b, 0)
+  })
+
   return {
     isConnected,
     isRegistered,
     connectionError,
+    unreadCounts,
+    totalUnreads,
+    clearUnread,
     sendMessage,
     sendSignal
   }

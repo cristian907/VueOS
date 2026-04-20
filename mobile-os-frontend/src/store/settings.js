@@ -18,6 +18,57 @@ export const useSettingsStore = defineStore('settings', () => {
   // --- MODO OSCURO ---
   const darkMode = ref(localStorage.getItem('os_dark_mode') === 'true')
 
+  // --- CONFIGURACIÓN DEL ESCRITORIO (Multi-página) ---
+  const initialApps = [
+    { id: 'calc', name: 'Calculadora', color: '#f97316', iconType: 'text', iconValue: '±', ramRequired: 1024, component: 'calc' },
+    { id: 'notes', name: 'Notas', color: '#eab308', iconType: 'svg', iconValue: 'notes', ramRequired: 256, component: 'notes' },
+    { id: 'contacts', name: 'Contactos', color: '#22c55e', iconType: 'svg', iconValue: 'contacts', ramRequired: 2048, component: 'contacts' },
+    { id: 'gallery', name: 'Fotos', color: '#f43f5e', iconType: 'svg', iconValue: 'gallery', ramRequired: 1024, component: 'gallery' },
+    { id: 'camera', name: 'Cámara', color: '#737373', iconType: 'svg', iconValue: 'camera', ramRequired: 3072, component: 'camera' },
+    { id: 'phone', name: 'VueCall', color: '#3b82f6', iconType: 'svg', iconValue: 'phone', ramRequired: 2048, component: 'vuecall' },
+    { id: 'vuetext', name: 'VueText', color: '#3b82f6', iconType: 'svg', iconValue: 'vuetext', ramRequired: 1024, component: 'vuetext' },
+    { id: 'settings', name: 'Ajustes', color: '#6b7280', iconType: 'svg', iconValue: 'settings', ramRequired: 512, component: 'settings' }
+  ]
+
+  const createFullGrid = (apps) => {
+    const grid = Array(24).fill(null)
+    apps.forEach((app, index) => {
+      if (index < 24) grid[index] = app
+    })
+    return grid
+  }
+
+  // Ahora desktopApps es un array de páginas [ [...24], [...24] ]
+  const getInitialDesktop = () => {
+    const saved = localStorage.getItem('os_desktop_pages')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      } catch(e) {}
+    }
+    // Por defecto 2 páginas
+    return [createFullGrid(initialApps), createFullGrid([])]
+  }
+
+  const desktopPages = ref(getInitialDesktop())
+
+  const updateDesktopPages = (newPages) => {
+    // Limpiar páginas vacías al final si hay más de una
+    let cleaned = [...newPages]
+    while (cleaned.length > 1 && cleaned[cleaned.length - 1].every(slot => slot === null)) {
+      cleaned.pop()
+    }
+    // Asegurar que siempre haya una página vacía al final para mover apps si la actual está llena?
+    // Por ahora dejarlo simple: si la última no está vacía, añadir una nueva.
+    if (!cleaned[cleaned.length - 1].every(slot => slot === null)) {
+        cleaned.push(createFullGrid([]))
+    }
+
+    desktopPages.value = cleaned
+    localStorage.setItem('os_desktop_pages', JSON.stringify(cleaned))
+  }
+
   // Inyección reactiva al HTML raíz
   watch(darkMode, (isDark) => {
     if (isDark) {
@@ -28,67 +79,33 @@ export const useSettingsStore = defineStore('settings', () => {
     localStorage.setItem('os_dark_mode', isDark)
   }, { immediate: true })
 
-  // --- ACCIONES ---
-
-  /**
-   * Valida el PIN ingresado.
-   * Si es correcto, desbloquea la pantalla.
-   * @returns {boolean} true si el PIN fue correcto
-   */
   const validatePin = (input) => {
     if (input === pin.value) {
       isLocked.value = false
-      console.log('[Settings] PIN correcto. Dispositivo desbloqueado.')
       return true
     }
-    console.warn('[Settings] PIN incorrecto.')
     return false
   }
 
-  /**
-   * Cambia el PIN validando el anterior.
-   * @returns {{ success: boolean, error: string }}
-   */
   const changePin = (oldPin, newPin, confirmPin) => {
-    if (oldPin !== pin.value) {
-      return { success: false, error: 'El PIN actual es incorrecto.' }
-    }
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-      return { success: false, error: 'El nuevo PIN debe ser de 4 dígitos numéricos.' }
-    }
-    if (newPin !== confirmPin) {
-      return { success: false, error: 'Los PINs nuevos no coinciden.' }
-    }
+    if (oldPin !== pin.value) return { success: false, error: 'PIN actual incorrecto' }
+    if (newPin.length !== 4) return { success: false, error: 'El PIN debe ser de 4 dígitos' }
+    if (newPin !== confirmPin) return { success: false, error: 'No coinciden' }
     pin.value = newPin
     localStorage.setItem('os_pin', newPin)
-    console.log('[Settings] PIN actualizado correctamente.')
-    return { success: true, error: '' }
+    return { success: true }
   }
 
-  /**
-   * Establece el número de teléfono ficticio.
-   */
   const setPhoneNumber = (number) => {
     phoneNumber.value = number
     localStorage.setItem('os_phone_number', number)
-    console.log(`[Settings] Número ficticio actualizado: ${number}`)
   }
 
-  /**
-   * Bloquea la pantalla.
-   */
-  const lock = () => {
-    isLocked.value = true
-    console.log('[Settings] Dispositivo bloqueado.')
-  }
+  const lock = () => { isLocked.value = true }
 
-  /**
-   * Alterna el tema entre claro y oscuro.
-   */
   const toggleTheme = (newTheme) => {
     theme.value = newTheme
     localStorage.setItem('os_theme', newTheme)
-    console.log(`[Settings] Tema cambiado a: ${newTheme}`)
   }
 
   return {
@@ -96,10 +113,13 @@ export const useSettingsStore = defineStore('settings', () => {
     phoneNumber,
     isLocked,
     theme,
+    darkMode,
+    desktopPages,
     validatePin,
     changePin,
     setPhoneNumber,
     lock,
-    toggleTheme
+    toggleTheme,
+    updateDesktopPages
   }
 })
