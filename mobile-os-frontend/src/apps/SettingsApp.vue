@@ -86,7 +86,25 @@
               ></div>
             </button>
           </div>
-          <p class="text-xs text-neutral-500">Alterna entre la apariencia clara y oscura del sistema.</p>
+          <p class="text-xs text-neutral-500 border-b border-neutral-100 dark:border-slate-700 pb-4">Alterna entre la apariencia clara y oscura del sistema.</p>
+
+          <!-- Fondo de pantalla -->
+          <div class="pt-2">
+            <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-4">Personalización</h3>
+            <div class="flex flex-col gap-3">
+              <div class="flex justify-between items-center">
+                <span class="text-black dark:text-white text-base">Fondo de pantalla</span>
+                <span class="text-xs text-neutral-400">{{ settingsStore.wallpaper ? 'Personalizado' : 'Por defecto' }}</span>
+              </div>
+              <button 
+                v-if="settingsStore.wallpaper"
+                @click="handleResetWallpaper"
+                class="w-full py-3 bg-red-500/10 text-red-500 rounded-xl text-sm font-bold active:scale-95 transition-transform"
+              >
+                Restablecer por defecto
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -249,6 +267,10 @@ const handleLock = () => {
 const handleToggleTheme = () => {
   const newTheme = settingsStore.theme === 'dark' ? 'light' : 'dark'
   settingsStore.toggleTheme(newTheme)
+}
+
+const handleResetWallpaper = () => {
+  settingsStore.setWallpaper(null)
 }
 
 // --- Red (Número Virtual) ---

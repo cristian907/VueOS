@@ -6,13 +6,22 @@
       class="relative w-full h-[100dvh] sm:w-[375px] sm:h-[812px] sm:rounded-[40px] overflow-hidden flex flex-col bg-white dark:bg-slate-900 shadow-2xl sm:ring-8 ring-slate-200 dark:ring-slate-800 transition-all font-sans"
     >
       <!-- Wallpaper Background -->
-      <div class="absolute inset-0 z-0">
-        <div v-if="settingsStore.theme === 'dark'" class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-90 blur-sm mix-blend-overlay"></div>
-        <div v-else class="absolute inset-0 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 opacity-90 blur-sm"></div>
-        
-        <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-        <div class="absolute top-32 -right-32 w-96 h-96 bg-yellow-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div class="absolute -bottom-32 left-20 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+      <div class="absolute inset-0 z-0 overflow-hidden">
+        <!-- Imagen de Fondo Personalizada -->
+        <div v-if="settingsStore.wallpaper" class="absolute inset-0 z-0">
+          <img :src="settingsStore.wallpaper" class="w-full h-full object-cover transition-opacity duration-500" />
+          <div class="absolute inset-0 bg-black/20"></div> <!-- Filtro sutil para legibilidad -->
+        </div>
+
+        <!-- Gradientes por defecto -->
+        <template v-else>
+          <div v-if="settingsStore.theme === 'dark'" class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-90 blur-sm mix-blend-overlay"></div>
+          <div v-else class="absolute inset-0 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 opacity-90 blur-sm"></div>
+          
+          <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+          <div class="absolute top-32 -right-32 w-96 h-96 bg-yellow-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+          <div class="absolute -bottom-32 left-20 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+        </template>
       </div>
 
 

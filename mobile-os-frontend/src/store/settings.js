@@ -18,6 +18,9 @@ export const useSettingsStore = defineStore('settings', () => {
   // --- MODO OSCURO ---
   const darkMode = ref(localStorage.getItem('os_dark_mode') === 'true')
 
+  // --- FONDO DE PANTALLA ---
+  const wallpaper = ref(localStorage.getItem('os_wallpaper') || null) // ID o URL
+
   // --- CONFIGURACIÓN DEL ESCRITORIO (Multi-página) ---
   const initialApps = [
     { id: 'calc', name: 'Calculadora', color: '#f97316', iconType: 'text', iconValue: '±', ramRequired: 1024, component: 'calc' },
@@ -108,18 +111,25 @@ export const useSettingsStore = defineStore('settings', () => {
     localStorage.setItem('os_theme', newTheme)
   }
 
+  const setWallpaper = (url) => {
+    wallpaper.value = url
+    localStorage.setItem('os_wallpaper', url)
+  }
+
   return {
     pin,
     phoneNumber,
     isLocked,
     theme,
     darkMode,
+    wallpaper,
     desktopPages,
     validatePin,
     changePin,
     setPhoneNumber,
     lock,
     toggleTheme,
+    setWallpaper,
     updateDesktopPages
   }
 })

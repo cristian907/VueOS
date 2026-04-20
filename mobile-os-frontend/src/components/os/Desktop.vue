@@ -19,13 +19,13 @@
       <div 
         v-for="(page, pIndex) in settings.desktopPages" 
         :key="pIndex"
-        class="min-w-full h-full px-4 pt-10 grid grid-cols-4 gap-y-8 gap-x-2 content-start"
+        class="min-w-full h-full px-4 pt-10 grid grid-cols-4 gap-y-8 sm:gap-y-8 gap-x-2 content-start pb-24 sm:pb-10"
       >
         <!-- Cada Slot de la Cuadrícula -->
         <div 
           v-for="(app, aIndex) in page" 
           :key="aIndex"
-          class="relative flex justify-center items-center h-20 w-full rounded-2xl transition-all duration-200"
+          class="relative flex justify-center items-center h-16 sm:h-20 w-full rounded-2xl transition-all duration-200"
           :class="{ 'bg-white/10 ring-2 ring-white/20': isOverPage === pIndex && isOverIndex === aIndex }"
           @dragover.prevent="onDragOver($event, pIndex, aIndex)"
           @dragleave="onDragLeave"
