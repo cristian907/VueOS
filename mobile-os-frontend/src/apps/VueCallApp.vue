@@ -4,7 +4,7 @@
     <!-- Tab: Keypad -->
     <div v-show="activeTab === 'keypad'" class="flex-1 flex flex-col overflow-hidden">
       <div class="pt-5 px-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md sticky top-0 z-10 transition-colors">
-        <h1 class="text-3xl font-bold text-black dark:text-white">Teléfono</h1>
+        <h1 class="text-3xl font-bold text-black dark:text-white">VueCall</h1>
       </div>
       
       <div class="p-6 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
@@ -19,6 +19,29 @@
       </div>
 
       <div class="flex-1 overflow-y-auto px-4">
+        <!-- Call History -->
+        <div v-if="!phoneNumber && callStore.callHistory.length > 0" class="mt-2">
+          <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">Recientes</h3>
+          <div 
+            v-for="(hist, idx) in callStore.callHistory" 
+            :key="idx"
+            @click="startCall(hist.number)"
+            class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 cursor-pointer active:bg-gray-200 dark:active:bg-slate-800 rounded-xl px-2 transition-colors"
+          >
+             <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" :class="hist.type === 'outgoing' ? 'bg-blue-100 text-blue-500 dark:bg-blue-900/30' : 'bg-green-100 text-green-500 dark:bg-green-900/30'">
+                <svg v-if="hist.type==='outgoing'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5h6m0 0v6m0-6L15 11"></path></svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v6h6m-6 0l6-6"></path></svg>
+             </div>
+             <div class="flex-1 overflow-hidden">
+               <h3 class="font-semibold text-base text-black dark:text-white truncate">{{ getContactName(hist.number) }}</h3>
+               <p v-if="getContactName(hist.number) !== formatPhone(hist.number)" class="text-gray-500 dark:text-gray-400 text-xs font-mono mt-0.5">{{ formatPhone(hist.number) }}</p>
+             </div>
+             <div class="text-xs text-gray-400 font-mono">
+               {{ new Date(hist.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+             </div>
+          </div>
+        </div>
+
         <!-- Direct Call Option -->
         <div v-if="phoneNumber" @click="startCall(phoneNumber)" class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800 active:bg-gray-200 dark:active:bg-slate-800 cursor-pointer rounded-xl px-2 transition-colors">
           <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white shadow-md shadow-green-500/20 shrink-0">
@@ -102,49 +125,13 @@
         <span class="text-[11px] font-semibold">Contactos</span>
       </button>
     </div>
-    <!-- Active Call Overlay -->
-    <div v-if="callStore.callState !== 'IDLE'" class="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex flex-col justify-between items-center py-16 px-6 animate-fade-in text-white">
-      <!-- Info superior -->
-      <div class="text-center mt-10">
-        <div class="w-24 h-24 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full flex items-center justify-center text-4xl mb-4 mx-auto shadow-2xl border border-gray-600">
-           👤
-        </div>
-        <h2 class="text-3xl font-bold mb-2">{{ callStore.remoteNumber }}</h2>
-        <p class="text-gray-400 text-lg">
-          {{ callStore.callState === 'CALLING' ? 'Llamando...' : 
-             callStore.callState === 'RINGING' ? 'Llamada Entrante' : 
-             'En curso' }}
-        </p>
-      </div>
 
-      <!-- Controles inferiores -->
-      <div class="flex gap-10 w-full justify-center mb-10">
-        <!-- RINGING: Aceptar / Rechazar -->
-        <template v-if="callStore.callState === 'RINGING'">
-          <button @click="callStore.rejectCall" class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-red-500/20">
-             <svg class="w-8 h-8 rotate-[135deg]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </button>
-          <button @click="callStore.acceptCall" class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-green-500/20 animate-pulse">
-             <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </button>
-        </template>
-        
-        <!-- CALLING / ACTIVE: Colgar -->
-        <template v-else>
-          <button @click="callStore.endCall" class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-red-500/20">
-             <svg class="w-8 h-8 rotate-[135deg]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
-          </button>
-        </template>
-      </div>
-
-      <audio ref="remoteAudio" autoplay></audio>
-    </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useContactsStore } from '../store/contacts'
 import { useCallStore } from '../store/call'
 
@@ -153,13 +140,6 @@ const callStore = useCallStore()
 
 const activeTab = ref('keypad')
 const phoneNumber = ref('')
-const remoteAudio = ref(null)
-
-watch(() => callStore.remoteStream, (newStream) => {
-  if (remoteAudio.value && newStream) {
-    remoteAudio.value.srcObject = newStream
-  }
-})
 
 const formatPhone = (val) => {
   if (!val) return ''
@@ -168,6 +148,14 @@ const formatPhone = (val) => {
     return clean.substring(0, 4) + '-' + clean.substring(4)
   }
   return clean
+}
+
+
+const getContactName = (number) => {
+  if (!number) return 'Desconocido'
+  const cleanRemote = number.replace(/\D/g, '')
+  const contact = contactsStore.list.find(c => c.id.replace(/\D/g, '') === cleanRemote)
+  return contact ? contact.name : formatPhone(number)
 }
 
 const handlePhoneInput = (e) => {

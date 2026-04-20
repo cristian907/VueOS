@@ -43,6 +43,9 @@
 
       <!-- LockScreen (capa superior a todo) -->
       <LockScreen v-if="settingsStore.isLocked" />
+
+      <!-- CallOverlay (capa superior absoluta para llamadas) -->
+      <CallOverlay />
     </div>
   </div>
 </template>
@@ -57,6 +60,7 @@ import DesktopLayer from './components/os/Desktop.vue'
 import WindowManager from './components/os/WindowManager.vue'
 import HomeIndicator from './components/os/HomeIndicator.vue'
 import LockScreen from './components/os/LockScreen.vue'
+import CallOverlay from './components/os/CallOverlay.vue'
 
 const settingsStore = useSettingsStore()
 

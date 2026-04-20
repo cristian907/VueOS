@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useNetworkStore } from './network'
 
 // Use Google's public STUN servers for WebRTC
@@ -15,11 +15,37 @@ export const useCallStore = defineStore('call', () => {
   
   const callState = ref('IDLE') // IDLE, CALLING, RINGING, ACTIVE
   const remoteNumber = ref(null)
+  const callDuration = ref(0)
+  const callHistory = ref(JSON.parse(localStorage.getItem('os_call_history') || '[]'))
+  const callDirection = ref(null)
+  
+  let timerInterval = null
   
   const localStream = ref(null)
   const remoteStream = ref(null)
   
   let peerConnection = null
+
+  watch(callState, (newState) => {
+    if (newState === 'ACTIVE') {
+      addCallToHistory(remoteNumber.value, callDirection.value)
+      callDuration.value = 0
+      timerInterval = setInterval(() => {
+        callDuration.value++
+      }, 1000)
+    } else {
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+      }
+    }
+  })
+
+  const addCallToHistory = (number, type) => {
+    callHistory.value.unshift({ number, type, date: new Date().toISOString() })
+    if (callHistory.value.length > 50) callHistory.value.pop()
+    localStorage.setItem('os_call_history', JSON.stringify(callHistory.value))
+  }
 
   const resetState = () => {
     callState.value = 'IDLE'
@@ -86,6 +112,7 @@ export const useCallStore = defineStore('call', () => {
 
     callState.value = 'CALLING'
     remoteNumber.value = targetNumber
+    callDirection.value = 'outgoing'
 
     setupPeerConnection(targetNumber)
     
@@ -164,6 +191,7 @@ export const useCallStore = defineStore('call', () => {
       
       remoteNumber.value = sender
       callState.value = 'RINGING'
+      callDirection.value = 'incoming'
       
       setupPeerConnection(sender)
       await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp))
@@ -196,6 +224,8 @@ export const useCallStore = defineStore('call', () => {
   return {
     callState,
     remoteNumber,
+    callDuration,
+    callHistory,
     localStream,
     remoteStream,
     startCall,

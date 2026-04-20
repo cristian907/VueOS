@@ -149,6 +149,7 @@
           <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           <input 
             v-model="searchQuery" 
+            @input="handleSearchInput"
             type="text" 
             inputmode="search"
             placeholder="Nombre o número (ej: 0414...)" 
@@ -297,6 +298,22 @@ const messagesContainer = ref(null)
 // Modal de Buscar Contactos
 const showContactsModal = ref(false)
 const searchQuery = ref('')
+
+const handleSearchInput = (e) => {
+  let val = e.target.value
+  // Si empieza con un número, asumimos que es un teléfono y lo formateamos
+  if (/^[\d\-\s]+$/.test(val) || /^\d/.test(val)) {
+    let clean = val.replace(/\D/g, '')
+    if (clean.length > 11) {
+      clean = clean.substring(0, 11)
+    }
+    if (clean.length > 4) {
+      searchQuery.value = clean.substring(0, 4) + '-' + clean.substring(4)
+    } else {
+      searchQuery.value = clean
+    }
+  }
+}
 
 // Modal Quick Add
 const quickAddNumber = ref(null)

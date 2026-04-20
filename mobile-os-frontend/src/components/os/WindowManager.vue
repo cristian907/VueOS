@@ -33,7 +33,7 @@
       <!-- Componente Renderizado Escaldado (Simulando Vistas) -->
       <div 
           class="bg-black origin-center relative transition-all duration-500 w-full"
-          :class="!props.showMultitask ? 'h-full rounded-none shadow-none' : 'h-[412px] rounded-[32px] shadow-2xl ring-1 ring-white/20 overflow-hidden'"
+          :class="!props.showMultitask ? 'h-full rounded-b-[40px] shadow-none overflow-hidden' : 'h-[412px] rounded-[32px] shadow-2xl ring-1 ring-white/20 overflow-hidden'"
       >
           <!-- Div Trampa para capturar clics -->
           <div v-show="props.showMultitask" class="absolute inset-0 z-50 cursor-pointer" @click="handleAppClick(app.id)"></div>

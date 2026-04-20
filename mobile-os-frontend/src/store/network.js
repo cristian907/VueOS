@@ -49,7 +49,10 @@ export const useNetworkStore = defineStore('network', () => {
     clearReconnectTimer()
     closeSocket() // Limpiar siempre antes de crear una nueva conexión
 
-    socket = new WebSocket('ws://localhost:8080/ws')
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsHost = window.location.host
+    const wsUrl = `${wsProtocol}//${wsHost}/ws`
+    socket = new WebSocket(wsUrl)
 
     socket.onopen = () => {
       console.log('[Network] WebSocket conectado.')
