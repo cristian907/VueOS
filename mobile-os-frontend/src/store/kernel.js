@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useNetworkStore } from './network'
 
 export const useKernelStore = defineStore('kernel', () => {
   // --- ESTADO ---
@@ -11,6 +12,9 @@ export const useKernelStore = defineStore('kernel', () => {
   const activeProcesses = ref([])
   // App actual en primer plano (null = escritorio)
   const foregroundAppId = ref(null)
+
+  // Inicializa la red en el fondo silenciosamente (autómatamente se conecta si hay número)
+  const networkStore = useNetworkStore()
 
   // --- HARDWARE (Batería) ---
   const batteryLevel = ref(100) // 100% por defecto

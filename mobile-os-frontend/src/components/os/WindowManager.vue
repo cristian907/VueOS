@@ -66,6 +66,7 @@ import SettingsApp from '../../apps/SettingsApp.vue'
 import NotesApp from '../../apps/NotesApp.vue'
 import CameraApp from '../../apps/CameraApp.vue'
 import GalleryApp from '../../apps/GalleryApp.vue'
+import VueTextApp from '../../apps/VueTextApp.vue'
 
 const props = defineProps({
   showMultitask: Boolean
@@ -82,6 +83,7 @@ const getComponentFor = (componentName) => {
     case 'notes': return NotesApp
     case 'camera': return CameraApp
     case 'gallery': return GalleryApp
+    case 'vuetext': return VueTextApp
     default: return null
   }
 }

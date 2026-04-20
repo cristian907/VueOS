@@ -53,11 +53,11 @@
       </DesktopIcon>
 
       <DesktopIcon 
-        name="Mensajes" 
-        color="#a855f7"
-        @click="handleOpenApp({ id: 'messages', name: 'App de Mensajes', ramRequired: 2048, component: null })"
+        name="VueText" 
+        color="#3b82f6"
+        @click="handleOpenApp({ id: 'vuetext', name: 'VueText', ramRequired: 1024, component: 'vuetext' })"
       >
-         <svg class="w-7 h-7 text-white fill-current" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
       </DesktopIcon>
 
       <DesktopIcon 
