@@ -68,6 +68,8 @@ import CameraApp from '../../apps/CameraApp.vue'
 import GalleryApp from '../../apps/GalleryApp.vue'
 import VueTextApp from '../../apps/VueTextApp.vue'
 import VueCallApp from '../../apps/VueCallApp.vue'
+import ClockApp from '../../apps/ClockApp.vue'
+import CalendarApp from '../../apps/CalendarApp.vue'
 
 const props = defineProps({
   showMultitask: Boolean
@@ -86,6 +88,8 @@ const getComponentFor = (componentName) => {
     case 'gallery': return GalleryApp
     case 'vuetext': return VueTextApp
     case 'vuecall': return VueCallApp
+    case 'clock': return ClockApp
+    case 'calendar': return CalendarApp
     default: return null
   }
 }

@@ -55,6 +55,9 @@
 
       <!-- CallOverlay (capa superior absoluta para llamadas) -->
       <CallOverlay />
+
+      <!-- Notificaciones del Sistema -->
+      <NotificationToast />
     </div>
   </div>
 </template>
@@ -70,6 +73,7 @@ import WindowManager from './components/os/WindowManager.vue'
 import HomeIndicator from './components/os/HomeIndicator.vue'
 import LockScreen from './components/os/LockScreen.vue'
 import CallOverlay from './components/os/CallOverlay.vue'
+import NotificationToast from './components/os/NotificationToast.vue'
 
 const settingsStore = useSettingsStore()
 

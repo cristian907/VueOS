@@ -19,10 +19,14 @@ export const useSettingsStore = defineStore('settings', () => {
   const darkMode = ref(localStorage.getItem('os_dark_mode') === 'true')
 
   // --- FONDO DE PANTALLA ---
-  const wallpaper = ref(localStorage.getItem('os_wallpaper') || null) // ID o URL
+  const savedWallpaper = localStorage.getItem('os_wallpaper')
+  const wallpaper = ref((savedWallpaper === 'null' || !savedWallpaper) ? null : savedWallpaper)
 
   // --- CONFIGURACIÓN DEL ESCRITORIO (Multi-página) ---
   const initialApps = [
+    { id: 'settings', name: 'Ajustes', color: '#6b7280', iconType: 'svg', iconValue: 'settings', ramRequired: 512, component: 'settings' },
+    { id: 'clock', name: 'Reloj', color: '#000000', iconType: 'svg', iconValue: 'clock', ramRequired: 512, component: 'clock' },
+    { id: 'calendar', name: 'Calendario', color: '#ef4444', iconType: 'svg', iconValue: 'calendar', ramRequired: 512, component: 'calendar' },
     { id: 'calc', name: 'Calculadora', color: '#f97316', iconType: 'text', iconValue: '±', ramRequired: 1024, component: 'calc' },
     { id: 'notes', name: 'Notas', color: '#eab308', iconType: 'svg', iconValue: 'notes', ramRequired: 256, component: 'notes' },
     { id: 'contacts', name: 'Contactos', color: '#22c55e', iconType: 'svg', iconValue: 'contacts', ramRequired: 2048, component: 'contacts' },
@@ -30,7 +34,11 @@ export const useSettingsStore = defineStore('settings', () => {
     { id: 'camera', name: 'Cámara', color: '#737373', iconType: 'svg', iconValue: 'camera', ramRequired: 3072, component: 'camera' },
     { id: 'phone', name: 'VueCall', color: '#3b82f6', iconType: 'svg', iconValue: 'phone', ramRequired: 2048, component: 'vuecall' },
     { id: 'vuetext', name: 'VueText', color: '#3b82f6', iconType: 'svg', iconValue: 'vuetext', ramRequired: 1024, component: 'vuetext' },
-    { id: 'settings', name: 'Ajustes', color: '#6b7280', iconType: 'svg', iconValue: 'settings', ramRequired: 512, component: 'settings' }
+    { id: 'whatsapp', name: 'WhatsApp', color: '#25d366', iconType: 'svg', iconValue: 'whatsapp', url: 'https://web.whatsapp.com' },
+    { id: 'instagram', name: 'Instagram', color: '#e1306c', iconType: 'svg', iconValue: 'instagram', url: 'https://www.instagram.com' },
+    { id: 'facebook', name: 'Facebook', color: '#1877f2', iconType: 'svg', iconValue: 'facebook', url: 'https://www.facebook.com' },
+    { id: 'tiktok', name: 'TikTok', color: '#000000', iconType: 'svg', iconValue: 'tiktok', url: 'https://www.tiktok.com' },
+    { id: 'youtube', name: 'YouTube', color: '#ff0000', iconType: 'svg', iconValue: 'youtube', url: 'https://www.youtube.com' }
   ]
 
   const createFullGrid = (apps) => {
@@ -42,15 +50,8 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   // Ahora desktopApps es un array de páginas [ [...24], [...24] ]
+  // Forzamos el nuevo orden solicitado ignorando el caché de localStorage para esta actualización
   const getInitialDesktop = () => {
-    const saved = localStorage.getItem('os_desktop_pages')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      } catch(e) {}
-    }
-    // Por defecto 2 páginas
     return [createFullGrid(initialApps), createFullGrid([])]
   }
 
@@ -113,7 +114,11 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const setWallpaper = (url) => {
     wallpaper.value = url
-    localStorage.setItem('os_wallpaper', url)
+    if (url === null) {
+      localStorage.removeItem('os_wallpaper')
+    } else {
+      localStorage.setItem('os_wallpaper', url)
+    }
   }
 
   return {

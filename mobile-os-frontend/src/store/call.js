@@ -10,8 +10,11 @@ const iceServers = {
   ]
 }
 
+import { useNotificationStore } from './notification'
+
 export const useCallStore = defineStore('call', () => {
   const networkStore = useNetworkStore()
+  const notificationStore = useNotificationStore()
   
   const callState = ref('IDLE') // IDLE, CALLING, RINGING, ACTIVE
   const remoteNumber = ref(null)
@@ -26,15 +29,67 @@ export const useCallStore = defineStore('call', () => {
   const remoteStream = ref(null)
   
   let peerConnection = null
+  let audioCtx = null
+  let pingInterval = null
+  let callTimeout = null
+
+  const startPingSound = () => {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (pingInterval) return
+
+    const playPing = () => {
+      if (audioCtx.state === 'suspended') audioCtx.resume()
+      const osc = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(660, audioCtx.currentTime) // Tono agradable
+      
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8)
+      
+      osc.connect(gain)
+      gain.connect(audioCtx.destination)
+      
+      osc.start()
+      osc.stop(audioCtx.currentTime + 0.8)
+    }
+
+    playPing()
+    pingInterval = setInterval(playPing, 2000)
+  }
+
+  const stopPingSound = () => {
+    if (pingInterval) {
+      clearInterval(pingInterval)
+      pingInterval = null
+    }
+  }
 
   watch(callState, (newState) => {
+    // Limpiar timeout previo si existe
+    if (callTimeout) {
+      clearTimeout(callTimeout)
+      callTimeout = null
+    }
+
     if (newState === 'ACTIVE') {
+      stopPingSound()
       addCallToHistory(remoteNumber.value, callDirection.value, isVideoCall.value)
       callDuration.value = 0
       timerInterval = setInterval(() => {
         callDuration.value++
       }, 1000)
+    } else if (newState === 'CALLING' || newState === 'RINGING') {
+      startPingSound()
+      // Límite de 10 segundos para aceptar la llamada
+      callTimeout = setTimeout(() => {
+        console.log('[WebRTC] Tiempo de espera agotado')
+        notificationStore.show('La llamada no fue respondida', 'error')
+        endCall()
+      }, 10000)
     } else {
+      stopPingSound()
       if (timerInterval) {
         clearInterval(timerInterval)
         timerInterval = null

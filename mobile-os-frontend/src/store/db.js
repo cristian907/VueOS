@@ -10,8 +10,11 @@ db.version(2).stores({
 })
 
 // v3: no se cambia el schema, pero aceptamos el campo 'blob' en messages
-db.version(3).stores({
+// v4: Agregamos alarmas y eventos
+db.version(4).stores({
   photos: '++id, date',
   notes: '++id, title, date',
-  messages: '++id, chatWith, sender, date'
+  messages: '++id, chatWith, sender, date',
+  alarms: '++id, time, enabled',
+  events: '++id, date, title'
 })
