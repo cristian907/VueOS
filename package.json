@@ -1,4 +1,12 @@
 {
+  "name": "vueos-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix mobile-os-frontend",
+    "build:frontend": "npm run build --prefix mobile-os-frontend",
+    "start:backend": "cd mobile-os-backend && go run ."
+  },
   "dependencies": {
     "dexie": "^4.4.2"
   }
